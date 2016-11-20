@@ -1,7 +1,8 @@
 
 #include "wiring_private.h"
+#include "interrupts.h"
 #include "aioiface.h"
-#include <SPI.h>
+#include <../../libraries/SPI/SPI.h>
 #include <WiievaWiring.h>
 
 extern "C" {
@@ -19,7 +20,7 @@ extern "C" int  __analogRead(uint8_t pin);
 namespace wiieva
 {
     const uint16_t WIIEVA_STM32_DELAY_DATA_US = 2;
-    const uint16_t cmd_wait_times_us []={1,5,5,3,3,2,2,20,30,30,3,5,4,4,
+    const uint16_t cmd_wait_times_us []={1,5,5,3,3,2,2,20,20,30,30,3,5,4,4,
                                          0,0,4,4,0,0,3,0,0,0,0,0,0,0,0};
     uint16_t pinModes [ESP_PINS_OFFSET] = {0};
     uint32_t stmWaitTillMicros = 0;
@@ -56,15 +57,18 @@ namespace wiieva
     uint16_t sendCommand (uint16_t cmd,int flags, uint16_t arg1,uint16_t arg2,uint16_t arg3,uint16_t *buf)
     {
         uint32_t ret = 0;
+        // Additional delay for commands, what can return answer
+        if (flags & (SEND_CMD_FL_ANSWER|SEND_CMD_FL_RX_BUF|SEND_CMD_FL_TX_BUF)) {
+            stmWaitTillMicros += 2;
+        }
+        waitSTM ();
+        InterruptLock lock;
+
         SPI.beginTransaction (spiSettings);
 
         // CS low
         *portOutputRegister (0) &= ~digitalPinToBitMask(WIIEVA_STM_CS);
 
-        // Additional delay for commands, what can return answer
-        if (flags & (SEND_CMD_FL_ANSWER|SEND_CMD_FL_RX_BUF|SEND_CMD_FL_TX_BUF)) {
-            stmWaitTillMicros += 2;
-        }
         // Write command word
         sendWordSTM (cmd | (arg1<<8) | (arg2 <<5),cmd_wait_times_us[cmd]);
 
