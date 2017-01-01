@@ -2,7 +2,7 @@
 #include "wiring_private.h"
 #include "interrupts.h"
 #include "aioiface.h"
-#include <../../libraries/SPI/SPI.h>
+#include <SPI.h>
 #include <WiievaWiring.h>
 
 extern "C" {
